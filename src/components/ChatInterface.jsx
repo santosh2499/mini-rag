@@ -119,7 +119,7 @@ export function ChatInterface() {
                                 >
                                     <div className="flex items-center gap-2">
                                         <BookOpen className="h-4 w-4 text-blue-500" />
-                                        <span>References & Sources ({result.citations.length})</span>
+                                        <span className="font-bold">References & Sources ({result.citations.length})</span>
                                     </div>
                                     {expandedSources ? (
                                         <ChevronUp className="h-4 w-4 text-muted-foreground" />
@@ -143,7 +143,7 @@ export function ChatInterface() {
                                                         className="p-3 rounded-lg bg-background border border-border/50 text-sm"
                                                     >
                                                         <div className="flex items-center justify-between mb-2">
-                                                            <span className="font-semibold text-primary text-xs uppercase tracking-wider">
+                                                            <span className="font-bold text-primary text-xs uppercase tracking-wider">
                                                                 Citation [{cite.id}]
                                                             </span>
                                                             <span className="text-xs text-muted-foreground">

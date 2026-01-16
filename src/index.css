@@ -32,75 +32,74 @@
 }
 
 :root {
-  /* Light Mode: Crisp & High Visibility */
-  --background: 210 40% 98%;
-  --foreground: 222 47% 11%;
+  /* Light Mode: Clean & Minimal */
+  --background: 0 0% 100%;
+  --foreground: 240 10% 4%;
 
-  --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
+  --card: 0 0% 98%;
+  --card-foreground: 240 10% 4%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
+  --popover-foreground: 240 10% 4%;
 
-  --primary: 217 91% 60%;
-  /* Electric Royal Blue */
+  --primary: 221 83% 53%;
+  /* Crisp Azure Blue */
   --primary-foreground: 210 40% 98%;
 
-  --secondary: 210 40% 96.1%;
-  --secondary-foreground: 222 47% 11%;
+  --secondary: 240 5% 96%;
+  --secondary-foreground: 240 6% 10%;
 
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215 16% 47%;
+  --muted: 240 5% 96%;
+  --muted-foreground: 240 4% 45%;
 
-  --accent: 217 91% 95%;
-  /* Light Blue tint */
-  --accent-foreground: 222 47% 11%;
+  --accent: 240 5% 96%;
+  --accent-foreground: 240 6% 10%;
 
   --destructive: 0 84% 60%;
-  --destructive-foreground: 210 40% 98%;
+  --destructive-foreground: 0 0% 98%;
 
-  --border: 214 32% 91%;
-  --input: 214 32% 91%;
-  --ring: 217 91% 60%;
+  --border: 240 6% 90%;
+  --input: 240 6% 90%;
+  --ring: 240 5% 65%;
 
   --radius: 0.75rem;
 }
 
 .dark {
-  /* Dark Mode: Deep Ocean & Neon Cyan High Contrast */
-  --background: 222 47% 11%;
-  /* Rich Dark Blue */
-  --foreground: 210 40% 98%;
-  /* Bright White */
+  /* Dark Mode: Professional & Deep with High Contrast */
+  --background: 240 10% 4%;
+  --foreground: 0 0% 100%;
+  /* Pure White */
 
-  --card: 224 71% 8%;
+  --card: 240 10% 8%;
   /* Slightly lighter than bg */
-  --card-foreground: 210 40% 98%;
+  --card-foreground: 0 0% 100%;
 
-  --popover: 224 71% 8%;
-  --popover-foreground: 210 40% 98%;
+  --popover: 240 10% 8%;
+  --popover-foreground: 0 0% 100%;
 
-  --primary: 190 90% 50%;
-  /* Bright Neon Cyan/Teal */
+  --primary: 217 91% 65%;
+  /* Brighter Blue */
   --primary-foreground: 222 47% 11%;
-  /* Dark text on neon */
 
-  --secondary: 217 33% 20%;
-  --secondary-foreground: 210 40% 98%;
+  --secondary: 240 5% 20%;
+  /* Lighter secondary */
+  --secondary-foreground: 0 0% 100%;
 
-  --muted: 217 33% 20%;
-  --muted-foreground: 215 20% 75%;
-  /* Brighter muted text */
+  --muted: 240 5% 20%;
+  --muted-foreground: 240 5% 80%;
+  /* Much brighter gray for readability */
 
-  --accent: 217 33% 20%;
-  --accent-foreground: 210 40% 98%;
+  --accent: 240 5% 20%;
+  --accent-foreground: 0 0% 100%;
 
   --destructive: 0 63% 31%;
-  --destructive-foreground: 210 40% 98%;
+  --destructive-foreground: 0 0% 98%;
 
-  --border: 217 33% 25%;
-  --input: 217 33% 25%;
-  --ring: 190 90% 50%;
+  --border: 240 5% 25%;
+  /* Visible borders */
+  --input: 240 5% 25%;
+  --ring: 240 5% 65%;
 }
 
 @layer base {
@@ -110,19 +109,19 @@
 
   body {
     @apply bg-background text-foreground selection:bg-primary/20 selection:text-primary antialiased;
-    /* Clean, subtle gradients */
+    /* Subtle background mesh/glow */
     background-image:
-      radial-gradient(at 0% 0%, hsla(217, 91%, 60%, 0.1) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, hsla(190, 90%, 50%, 0.1) 0px, transparent 50%);
+      radial-gradient(circle at 15% 50%, hsla(221, 83%, 53%, 0.05) 0%, transparent 40%),
+      radial-gradient(circle at 85% 30%, hsla(217, 91%, 60%, 0.05) 0%, transparent 40%);
     background-attachment: fixed;
   }
 }
 
-/* Glassmorphism utilities - Increased Opacity for Readability */
+/* Cleaner Glassmorphism */
 .glass {
-  @apply bg-card/75 backdrop-blur-xl border border-white/10 shadow-xl will-change-transform transform-gpu;
+  @apply bg-card/60 backdrop-blur-md border border-border/50 shadow-sm will-change-transform transform-gpu;
 }
 
 .glass-hover {
-  @apply transition-all duration-300 hover:bg-card/90 hover:scale-[1.01] hover:shadow-2xl hover:border-primary/30;
+  @apply transition-all duration-300 hover:bg-card/80 hover:shadow-md hover:border-border/80;
 }

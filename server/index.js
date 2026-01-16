@@ -183,9 +183,9 @@ ${query}
         `.trim();
 
         const gemini = getGeminiClient();
-        const model = gemini.getGenerativeModel({ model: "gemini-2.5-flash" }); // Or 1.5-flash if 2.5 fails
         const prompt = `${systemPrompt}\n\n${userMessage}`;
 
+        const model = gemini.getGenerativeModel({ model: "gemini-2.5-flash" });
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const answer = response.text();

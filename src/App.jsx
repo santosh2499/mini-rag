@@ -11,7 +11,7 @@ export default function Home() {
     <div className="min-h-screen flex flex-col bg-background selection:bg-primary/20">
       <Header />
 
-      <main className="flex-1 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]">
+      <main className="flex-1 bg-[url('/grid.svg')] bg-center">
         <div className="container max-w-screen-xl py-6 lg:py-10 px-4 md:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
 
