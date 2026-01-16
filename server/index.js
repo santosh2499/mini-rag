@@ -52,20 +52,29 @@ app.post('/api/ingest', upload.single('file'), async (req, res) => {
         const textsToEmbed = chunks.map((c) => c.pageContent.replace(/\n/g, " "));
 
         const embeddings = [];
-        const BATCH_SIZE = 90;
+        const BATCH_SIZE = 10; // Reduced from 90 to avoid timeouts/fetch errors
+
+        console.log(`Processing ${textsToEmbed.length} chunks...`);
 
         for (let i = 0; i < textsToEmbed.length; i += BATCH_SIZE) {
             const batch = textsToEmbed.slice(i, i + BATCH_SIZE);
             if (batch.length === 0) continue;
 
-            const response = await cohere.embed({
-                texts: batch,
-                model: CONFIG.EMBEDDING_MODEL,
-                inputType: "search_document",
-            });
+            console.log(`Embedding batch ${i / BATCH_SIZE + 1}/${Math.ceil(textsToEmbed.length / BATCH_SIZE)} (Size: ${batch.length})`);
 
-            if (Array.isArray(response.embeddings)) {
-                embeddings.push(...response.embeddings);
+            try {
+                const response = await cohere.embed({
+                    texts: batch,
+                    model: CONFIG.EMBEDDING_MODEL,
+                    inputType: "search_document",
+                });
+
+                if (Array.isArray(response.embeddings)) {
+                    embeddings.push(...response.embeddings);
+                }
+            } catch (batchError) {
+                console.error(`Error in batch ${i}:`, batchError.message);
+                throw batchError; // Re-throw to stop process or handle gracefully
             }
         }
 

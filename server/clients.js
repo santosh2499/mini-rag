@@ -15,7 +15,12 @@ export const getCohereClient = () => {
     if (!apiKey) {
         throw new Error("COHERE_API_KEY is not set");
     }
-    return new CohereClient({ token: apiKey });
+    return new CohereClient({
+        token: apiKey,
+        clientConfig: {
+            timeout: 60000, // 60 seconds timeout
+        }
+    });
 };
 
 export const getGeminiClient = () => {
