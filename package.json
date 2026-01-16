@@ -2,25 +2,37 @@
   "name": "intern-assignment",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "concurrently \"vite\" \"nodemon server/index.js\"",
+    "build": "vite build",
+    "start": "node server/index.js",
     "lint": "eslint"
   },
   "dependencies": {
-    "next": "16.1.2",
+    "@google/generative-ai": "^0.24.1",
+    "@langchain/textsplitters": "^1.0.1",
+    "@pinecone-database/pinecone": "^6.1.3",
+    "@vitejs/plugin-react": "^5.1.2",
+    "clsx": "^2.1.1",
+    "cohere-ai": "^7.20.0",
+    "concurrently": "^9.2.1",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "framer-motion": "^12.26.2",
+    "lucide-react": "^0.562.0",
+    "multer": "^2.0.2",
+    "nodemon": "^3.1.11",
+    "pdf-parse-fork": "^1.2.0",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "tailwind-merge": "^3.4.0",
+    "vite": "^7.3.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.1.2",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "tailwindcss": "^4"
   }
 }
