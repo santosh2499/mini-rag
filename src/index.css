@@ -120,7 +120,7 @@
 
 /* Glassmorphism utilities - Increased Opacity for Readability */
 .glass {
-  @apply bg-card/75 backdrop-blur-xl border border-white/10 shadow-xl;
+  @apply bg-card/75 backdrop-blur-xl border border-white/10 shadow-xl will-change-transform transform-gpu;
 }
 
 .glass-hover {
