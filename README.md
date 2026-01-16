@@ -8,7 +8,7 @@ A minimal but mighty Retrieval-Augmented Generation (RAG) application built with
 - **RAG Query Pipeline**:
   - **Retrieval**: Top-k vector search using Pinecone.
   - **Reranking**: Uses Cohere's Rerank v3.
-  - **Generation**: Google Gemini 1.5 Flash generates answers with citations.
+  - **Generation**: Google Gemini 2.5 Flash generates answers with citations.
 - **Modern UI**: Built with Tailwind CSS, Framer Motion, and Glassmorphism design principles.
 
 ## 🛠 Tech Stack
@@ -16,7 +16,7 @@ A minimal but mighty Retrieval-Augmented Generation (RAG) application built with
 - **Frontend**: Vite + React
 - **Backend**: Node.js + Express
 - **Vector DB**: Pinecone (Serverless)
-- **LLM**: Google Gemini 1.5 Flash
+- **LLM**: Google Gemini 2.5 Flash
 - **Embeddings**: Cohere `embed-english-v3.0` (1024 dim)
 - **Reranker**: Cohere `rerank-english-v3.0`
 
@@ -62,25 +62,49 @@ Builds the frontend to `dist/` and serves it via the Express backend.
 ## 🏗 Architecture
 
 \`\`\`mermaid
-graph TD
-    A[User Frontend] -->|Text/File| B(Ingest API)
-    B -->|Chunk & Embed| C[Cohere Embed v3]
-    C -->|Vectors| D[(Pinecone DB)]
+flowchart TD
+    %% Nodes
+    User[User Frontend\n(Vite + React)]
     
-    A -->|Query| E(Query API)
-    E -->|Embed Query| C
-    E -->|Vector Search| D
-    D -->|Top-K Chunks| E
-    E -->|Rerank| F[Cohere Rerank v3]
-    F -->|Top-N Context| G[Gemini 1.5 Flash]
-    G -->|Answer + Citations| A
+    subgraph Backend [Backend Server (Express)]
+        IngestAPI[Ingest API]
+        QueryAPI[Query API]
+    end
+    
+    subgraph AI_Services [AI & Storage Providers]
+        CohereEmbed[Cohere Embed v3\n(Embedding)]
+        CohereRerank[Cohere Rerank v3\n(Refining)]
+        Pinecone[(Pinecone DB)\n(Vector Store)]
+        Gemini[Gemini 2.5 Flash\n(Generation)]
+    end
+
+    %% Flows
+    
+    %% Ingestion Flow
+    User -- "1. Uploads Text/PDF" --> IngestAPI
+    IngestAPI -- "2. Chunk & Embed" --> CohereEmbed
+    CohereEmbed -- "3. Store Vectors" --> Pinecone
+
+    %% Query Flow
+    User -- "4. Asks Question" --> QueryAPI
+    QueryAPI -- "5. Embed Query" --> CohereEmbed
+    CohereEmbed -.-> Pinecone
+    Pinecone -- "6. Retrieve Top-K" --> QueryAPI
+    QueryAPI -- "7. Rerank Candidates" --> CohereRerank
+    CohereRerank -- "8. Top-N Context" --> Gemini
+    Gemini -- "9. Answer + Citations" --> User
+
+    %% Styling
+    style User fill:#3b82f6,stroke:#1d4ed8,color:white
+    style Pinecone fill:#10b981,stroke:#047857,color:white
+    style Gemini fill:#8b5cf6,stroke:#6d28d9,color:white
 \`\`\`
 
 ## 📝 Remarks & Trade-offs
 
 -   **Provider Limits**: 
-    -   Used **Google Gemini** (Free Tier) and **Cohere** (Trial) to avoid costs. 
-    -   API Rate limits may apply (e.g., Gemini has a request-per-minute cap).
+    -   Used **Google Gemini** (Free Tier) and **Cohere** (Trial) to keep the project cost-free. 
+    -   **Note**: The free version of the LLM has strict daily/minute **API call limits** (e.g., Gemini 2.5 Flash Experimental may have low rate limits). Application may hit `429 Too Many Requests` if used heavily.
 -   **Chunking Strategy**: 
     -   Used a simple `RecursiveCharacterTextSplitter` (~1000 tokens). 
     -   *Trade-off*: Does not respect semantic boundaries as well as semantic chunking, but is faster and cheaper.
