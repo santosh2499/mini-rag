@@ -105,7 +105,7 @@ export function ChatInterface() {
                                     <span>~{Math.round(result.answer.length / 4)} tokens</span>
                                 </div>
                                 <div>
-                                    Gemini 1.5 Flash
+                                    Groq Llama 3.3
                                 </div>
                             </div>
                         </div>

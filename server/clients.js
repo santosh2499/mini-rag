@@ -1,6 +1,6 @@
 import { Pinecone } from "@pinecone-database/pinecone";
 import { CohereClient } from "cohere-ai";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import Groq from "groq-sdk";
 
 export const getPineconeClient = () => {
     const apiKey = process.env.PINECONE_API_KEY;
@@ -23,12 +23,12 @@ export const getCohereClient = () => {
     });
 };
 
-export const getGeminiClient = () => {
-    const apiKey = process.env.GOOGLE_API_KEY;
+export const getGroqClient = () => {
+    const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
-        throw new Error("GOOGLE_API_KEY is not set");
+        throw new Error("GROQ_API_KEY is not set");
     }
-    return new GoogleGenerativeAI(apiKey);
+    return new Groq({ apiKey });
 };
 
 export const CONFIG = {

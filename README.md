@@ -1,6 +1,6 @@
 # Mini RAG - Track B Assessment
 
-A minimal but mighty Retrieval-Augmented Generation (RAG) application built with **Vite**, **Express**, **Pinecone**, **Cohere** (Embeddings + Rerank), and **Google Gemini** (LLM).
+A minimal but mighty Retrieval-Augmented Generation (RAG) application built with **Vite**, **Express**, **Pinecone**, **Cohere** (Embeddings + Rerank), and **Groq** (LLM - Llama 3.3).
 
 ## 🚀 Features
 
@@ -8,7 +8,7 @@ A minimal but mighty Retrieval-Augmented Generation (RAG) application built with
 - **RAG Query Pipeline**:
   - **Retrieval**: Top-k vector search using Pinecone.
   - **Reranking**: Uses Cohere's Rerank v3.
-  - **Generation**: Google Gemini 2.5 Flash generates answers with citations.
+  - **Generation**: Groq (Llama 3.3 70B) generates answers with citations.
 - **Modern UI**: Built with Tailwind CSS, Framer Motion, and Glassmorphism design principles.
 
 ## 🛠 Tech Stack
@@ -16,7 +16,7 @@ A minimal but mighty Retrieval-Augmented Generation (RAG) application built with
 - **Frontend**: Vite + React
 - **Backend**: Node.js + Express
 - **Vector DB**: Pinecone (Serverless)
-- **LLM**: Google Gemini 2.5 Flash
+- **LLM**: Groq (Llama 3.3 70B Versatile)
 - **Embeddings**: Cohere `embed-english-v3.0` (1024 dim)
 - **Reranker**: Cohere `rerank-english-v3.0`
 
@@ -37,7 +37,7 @@ npm install
 2. **Set Environment Variables**
 Create a `.env.local` file:
 \`\`\`bash
-GOOGLE_API_KEY=AIz...
+GROQ_API_KEY=gsk_...
 PINECONE_API_KEY=pc-...
 COHERE_API_KEY=...
 PINECONE_INDEX=mini-rag-index
@@ -75,7 +75,7 @@ flowchart TD
         CohereEmbed[Cohere Embed v3\n(Embedding)]
         CohereRerank[Cohere Rerank v3\n(Refining)]
         Pinecone[(Pinecone DB)\n(Vector Store)]
-        Gemini[Gemini 2.5 Flash\n(Generation)]
+        Groq[Groq Llama 3.3\n(Generation)]
     end
 
     %% Flows
@@ -91,20 +91,19 @@ flowchart TD
     CohereEmbed -.-> Pinecone
     Pinecone -- "6. Retrieve Top-K" --> QueryAPI
     QueryAPI -- "7. Rerank Candidates" --> CohereRerank
-    CohereRerank -- "8. Top-N Context" --> Gemini
-    Gemini -- "9. Answer + Citations" --> User
+    Groq -- "9. Answer + Citations" --> User
 
     %% Styling
     style User fill:#3b82f6,stroke:#1d4ed8,color:white
     style Pinecone fill:#10b981,stroke:#047857,color:white
-    style Gemini fill:#8b5cf6,stroke:#6d28d9,color:white
+    style Groq fill:#f59e0b,stroke:#d97706,color:white
 \`\`\`
 
 ## 📝 Remarks & Trade-offs
 
 -   **Provider Limits**: 
-    -   Used **Google Gemini** (Free Tier) and **Cohere** (Trial) to keep the project cost-free. 
-    -   **Note**: The free version of the LLM has strict daily/minute **API call limits** (e.g., Gemini 2.5 Flash Experimental may have low rate limits). Application may hit `429 Too Many Requests` if used heavily.
+    -   Used **Groq** (Llama 3.3) and **Cohere** (Trial) to keep the project cost-free. 
+    -   **Note**: The free version of the LLM has strict daily/minute **API call limits**. Application may hit `429 Too Many Requests` if used heavily.
 -   **Chunking Strategy**: 
     -   Used a simple `RecursiveCharacterTextSplitter` (~1000 tokens). 
     -   *Trade-off*: Does not respect semantic boundaries as well as semantic chunking, but is faster and cheaper.

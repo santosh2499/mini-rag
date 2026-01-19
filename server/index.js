@@ -6,7 +6,7 @@ import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import pdf from 'pdf-parse-fork'; // CommonJS default import
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getCohereClient, getPineconeClient, getGeminiClient, CONFIG } from './clients.js';
+import { getCohereClient, getPineconeClient, getGroqClient, CONFIG } from './clients.js';
 
 dotenv.config({ path: './.env.local' });
 
@@ -191,13 +191,17 @@ Question:
 ${query}
         `.trim();
 
-        const gemini = getGeminiClient();
-        const prompt = `${systemPrompt}\n\n${userMessage}`;
+        const groq = getGroqClient();
+        const chatCompletion = await groq.chat.completions.create({
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userMessage }
+            ],
+            model: "llama-3.3-70b-versatile", // Or another Groq-supported model
+            temperature: 0.1,
+        });
 
-        const model = gemini.getGenerativeModel({ model: "gemini-2.5-flash" });
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const answer = response.text();
+        const answer = chatCompletion.choices[0]?.message?.content || "No answer generated.";
 
         res.json({
             answer,
@@ -228,7 +232,7 @@ app.get(/(.*)/, (req, res) => {
     res.sendFile(path.join(distPath, 'index.html'));
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
     console.log(`Backend server running on http://localhost:${PORT}`);
 });

@@ -7,7 +7,7 @@ We ran 5 queries against this knowledge base to verify Retrieval Accuracy (Recal
 **System Settings:**
 - Retrieval: Top-15 chunks (Pinecone)
 - Reranking: Top-5 chunks (Cohere Rerank v3)
-- Generation: Google Gemini 1.5 Flash
+- Generation: Groq Llama 3.3 70B
 
 ## Gold Set (5 Q/A Pairs)
 
