@@ -5,6 +5,7 @@ import multer from 'multer';
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import pdf from 'pdf-parse-fork'; // CommonJS default import
 import path from 'path';
+import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { getCohereClient, getPineconeClient, getGroqClient, CONFIG } from './clients.js';
 
@@ -13,8 +14,41 @@ dotenv.config({ path: './.env.local' });
 const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
 
+// --- History Management ---
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const HISTORY_FILE = path.join(__dirname, 'history.json');
+
+async function getHistory() {
+    try {
+        const data = await fs.readFile(HISTORY_FILE, 'utf-8');
+        return JSON.parse(data);
+    } catch (error) {
+        if (error.code === 'ENOENT') return [];
+        throw error;
+    }
+}
+
+async function addToHistory(entry) {
+    const history = await getHistory();
+    history.unshift(entry); // Add to beginning
+    await fs.writeFile(HISTORY_FILE, JSON.stringify(history, null, 2));
+    return history;
+}
+// --------------------------
+
 app.use(cors());
 app.use(express.json());
+
+app.get('/api/documents', async (req, res) => {
+    try {
+        const history = await getHistory();
+        res.json(history);
+    } catch (error) {
+        console.error("Failed to fetch history:", error);
+        res.status(500).json({ error: "Failed to fetch document history" });
+    }
+});
 
 // Ingest Route
 app.post('/api/ingest', upload.single('file'), async (req, res) => {
@@ -98,6 +132,15 @@ app.post('/api/ingest', upload.single('file'), async (req, res) => {
             await index.upsert(batch);
         }
 
+        const historyEntry = {
+            id: Date.now().toString(),
+            name: sourceName,
+            type: req.file ? (req.file.mimetype === "application/pdf" ? "PDF" : "File") : "Text",
+            date: new Date().toISOString(),
+            chunkCount: chunks.length
+        };
+        await addToHistory(historyEntry);
+
         res.json({
             success: true,
             count: chunks.length,
@@ -112,15 +155,20 @@ app.post('/api/ingest', upload.single('file'), async (req, res) => {
 
 
 // Query Route
+// Query Route with Streaming & History
 app.post('/api/query', async (req, res) => {
-    const startTime = Date.now();
     try {
-        const { query } = req.body;
+        const { messages } = req.body;
 
-        if (!query) {
-            return res.status(400).json({ error: "No query provided" });
+        if (!messages || !Array.isArray(messages) || messages.length === 0) {
+            return res.status(400).json({ error: "No messages provided" });
         }
 
+        // 1. Get the latest user query
+        const lastMessage = messages[messages.length - 1];
+        const query = lastMessage.content;
+
+        // 2. Retrieval (Pinecone)
         const cohere = getCohereClient();
         const embedResponse = await cohere.embed({
             texts: [query],
@@ -128,9 +176,6 @@ app.post('/api/query', async (req, res) => {
             inputType: "search_query",
         });
 
-        if (!embedResponse.embeddings || !Array.isArray(embedResponse.embeddings)) {
-            throw new Error("Failed to generate embedding");
-        }
         const queryEmbedding = embedResponse.embeddings[0];
 
         const pinecone = getPineconeClient();
@@ -141,87 +186,112 @@ app.post('/api/query', async (req, res) => {
             includeMetadata: true,
         });
 
-        if (searchResults.matches.length === 0) {
-            return res.json({ answer: "No relevant information found.", citations: [] });
+        let contextText = "";
+        let topChunks = [];
+
+        if (searchResults.matches.length > 0) {
+            const documents = searchResults.matches.map((match) => (match.metadata?.text) || "");
+            const validDocs = documents.filter(d => d.length > 0);
+
+            if (validDocs.length > 0) {
+                // 3. Rerank (Cohere)
+                const rerankResponse = await cohere.rerank({
+                    documents: validDocs,
+                    query: query,
+                    topN: 5,
+                    model: "rerank-english-v3.0",
+                });
+
+                topChunks = rerankResponse.results.map((result) => {
+                    const originalMatch = searchResults.matches[result.index];
+                    return {
+                        ...originalMatch,
+                        relevance_score: result.relevanceScore
+                    };
+                });
+
+                contextText = topChunks
+                    .map((chunk, i) => `[${i + 1}] Content: ${chunk.metadata?.text}\nSource: ${chunk.metadata?.source}`)
+                    .join("\n\n");
+            }
         }
 
-        const documents = searchResults.matches.map((match) => (match.metadata?.text) || "");
-        const validDocs = documents.filter(d => d.length > 0);
-
-        if (validDocs.length === 0) {
-            return res.json({ answer: "No relevant information found.", citations: [] });
-        }
-
-        const rerankResponse = await cohere.rerank({
-            documents: validDocs,
-            query: query,
-            topN: 5,
-            model: "rerank-english-v3.0",
-        });
-
-        const topChunks = rerankResponse.results.map((result) => {
-            const originalMatch = searchResults.matches[result.index];
-            return {
-                ...originalMatch,
-                relevance_score: result.relevanceScore
-            };
-        });
-
-        const contextText = topChunks
-            .map((chunk, i) => `[${i + 1}] Content: ${chunk.metadata?.text}\nSource: ${chunk.metadata?.source}`)
-            .join("\n\n");
-
+        // 4. Construct System Prompt
         const systemPrompt = `
-You are an intelligent assistant. Your task is to synthesize an answer to the user's question using the provided context.
+You are an intelligent assistant for a RAG application.
+Your goal is to answer the user's question using the provided context.
 
-**Rules:**
-1. **Abstractive Generation**: Do not just copy-paste snippets. Synthesize and rephrase the information into a cohesive, well-written answer.
-2. **Strict Grounding**: Use ONLY the information in the provided context. Do not use outside knowledge.
-3. **Citations**: You MUST cite your sources using the reference numbers (e.g., [1]) provided in the context. Every distinct claim must be cited.
-4. **No Hallucination**: If the answer is not in the context, explicitly state: "I cannot answer this based on the provided context."
+**Instructions:**
+1. **Context-Driven**: base your answer *primarily* on the provided context snippets.
+2. **Conversation History**: The user may refer to previous messages. Use the conversation history to resolve pronouns or references (e.g., "it", "he", "that file").
+3. **Citations**: REQUIRED. Use the reference numbers (e.g., [1]) to cite where you found information.
+4. **Honesty**: If the context doesn't have the answer, say so. Do not make it up.
 
-Example: "Artificial Intelligence was coined by John McCarthy in 1956 [1], marking the beginning of the field as an academic discipline [2]."
+**Context from Documents:**
+${contextText || "No relevant documents found."}
         `.trim();
 
-        const userMessage = `
-Context:
-${contextText}
+        // 5. Setup LLM Messages (System + History)
+        // We filter out the last message from 'messages' because we will re-add it with context if needed, 
+        // OR we can just append the user message. 
+        // Simplest strategy: Convert FE messages to LLM format, prepend System.
+        // NOTE: We don't inject context into *every* past message, only the system prompt or the latest turn.
 
-Question: 
-${query}
-        `.trim();
+        const llmMessages = [
+            { role: "system", content: systemPrompt },
+            ...messages.map(m => ({
+                role: m.role === 'user' ? 'user' : 'assistant',
+                content: m.content
+            }))
+        ];
 
-        const groq = getGroqClient();
-        const chatCompletion = await groq.chat.completions.create({
-            messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: userMessage }
-            ],
-            model: "llama-3.3-70b-versatile", // Or another Groq-supported model
-            temperature: 0.1,
-        });
+        // 6. Start Streaming Response
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        res.setHeader('Transfer-Encoding', 'chunked');
 
-        const answer = chatCompletion.choices[0]?.message?.content || "No answer generated.";
+        // Send citations metadata first as a special JSON line (optional protocol, or just let client handle it)
+        // Ideally, we'd send a structured event, but for simple text streaming, we can just stream the text.
+        // To handle citations on the frontend, we can send them as a JSON header line or just append them.
+        // Let's send a JSON object first with citations, separated by a newline, then the text stream.
 
-        res.json({
-            answer,
+        const metadata = {
             citations: topChunks.map((chunk, i) => ({
                 id: i + 1,
                 text: chunk.metadata?.text,
                 source: chunk.metadata?.source,
                 score: chunk.relevance_score
-            })),
-            timing: Date.now() - startTime,
+            }))
+        };
+
+        res.write(JSON.stringify(metadata) + "\n__METADATA_END__\n");
+
+        const groq = getGroqClient();
+        const stream = await groq.chat.completions.create({
+            messages: llmMessages,
+            model: "llama-3.3-70b-versatile",
+            temperature: 0.1,
+            stream: true,
         });
+
+        for await (const chunk of stream) {
+            const content = chunk.choices[0]?.delta?.content || "";
+            if (content) {
+                res.write(content);
+            }
+        }
+
+        res.end();
 
     } catch (error) {
         console.error("Query Error:", error);
-        res.status(500).json({ error: error.message || "Failed to process query" });
+        if (!res.headersSent) {
+            res.status(500).json({ error: error.message || "Failed to process query" });
+        } else {
+            res.end();
+        }
     }
 });
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Serve static files from the dist directory (one level up from server/)
 const distPath = path.join(__dirname, '../dist');
